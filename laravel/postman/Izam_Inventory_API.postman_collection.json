@@ -1,0 +1,2128 @@
+{
+	"info": {
+		"_postman_id": "izam-inventory-collection",
+		"name": "Izam Inventory API",
+		"description": "Full API collection for the Izam Inventory Management System.\n\nCovers Auth, Inventory Items, Warehouses, and Stock Transfers with success, validation error, auth error, and edge case scenarios.\n\n## Setup\n1. Import the environment file alongside this collection.\n2. Run **Login - Success** first to auto-set the `{{token}}` variable.\n3. All authenticated requests use `Bearer {{token}}` automatically.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8020/api/v1"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [""]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"description": "Authentication endpoints: register, login, logout, me.",
+			"item": [
+				{
+					"name": "Register - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test('Response has token', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('token');",
+									"    pm.expect(json).to.have.property('user');",
+									"    pm.expect(json.user).to.have.property('id');",
+									"    pm.environment.set('token', json.token);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New User\",\n    \"email\": \"newuser_{{$timestamp}}@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Register - Validation Error (missing fields)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Has validation errors', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('errors');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Register - Validation Error (duplicate email)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Email already taken', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('email');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Duplicate User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Register - Validation Error (password too short)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Password validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('password');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Short Pass User\",\n    \"email\": \"shortpass@example.com\",\n    \"password\": \"123\",\n    \"password_confirmation\": \"123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Register - Validation Error (password mismatch)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Password confirmation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('password');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Mismatch User\",\n    \"email\": \"mismatch@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"different456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Login - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response has token and user', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('token');",
+									"    pm.expect(json).to.have.property('user');",
+									"    pm.expect(json.message).to.eql('Logged in successfully.');",
+									"    pm.environment.set('token', json.token);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": ["{{base_url}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Wrong Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"wrongpassword\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": ["{{base_url}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Non-existent Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"nonexistent@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": ["{{base_url}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Validation Error (missing fields)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Has validation errors', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('errors');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": ["{{base_url}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Invalid Email Format",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Email validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('email');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"not-an-email\",\n    \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": ["{{base_url}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Me - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response has user data', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('user');",
+									"    pm.expect(json.user).to.have.property('id');",
+									"    pm.expect(json.user).to.have.property('name');",
+									"    pm.expect(json.user).to.have.property('email');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/me",
+							"host": ["{{base_url}}"],
+							"path": ["me"]
+						}
+					}
+				},
+				{
+					"name": "Me - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/me",
+							"host": ["{{base_url}}"],
+							"path": ["me"]
+						}
+					}
+				},
+				{
+					"name": "Logout - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Logged out message', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.message).to.eql('Logged out successfully.');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logout",
+							"host": ["{{base_url}}"],
+							"path": ["logout"]
+						}
+					}
+				},
+				{
+					"name": "Logout - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/logout",
+							"host": ["{{base_url}}"],
+							"path": ["logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Inventory Items",
+			"description": "CRUD operations for inventory items with filtering and pagination.",
+			"item": [
+				{
+					"name": "List Items - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response is paginated', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('data');",
+									"    pm.expect(json).to.have.property('links');",
+									"    pm.expect(json).to.have.property('meta');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "List Items - Filter by Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response is paginated', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('data');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory?name=mouse",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{ "key": "name", "value": "mouse" }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Items - Filter by Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory?category=Electronics",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{ "key": "category", "value": "Electronics" }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Items - Filter by Price Range",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory?price_min=10&price_max=100",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{ "key": "price_min", "value": "10" },
+								{ "key": "price_max", "value": "100" }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Items - Custom Pagination",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Per page is 5', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.meta.per_page).to.eql(5);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory?per_page=5&page=1",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{ "key": "per_page", "value": "5" },
+								{ "key": "page", "value": "1" }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Items - Combined Filters",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory?name=mouse&category=Electronics&price_min=10&price_max=50&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{ "key": "name", "value": "mouse" },
+								{ "key": "category", "value": "Electronics" },
+								{ "key": "price_min", "value": "10" },
+								{ "key": "price_max", "value": "50" },
+								{ "key": "per_page", "value": "10" }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Items - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "Create Item - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test('Item created with correct data', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data).to.have.property('id');",
+									"    pm.expect(json.data.name).to.eql('Wireless Mouse');",
+									"    pm.expect(json.data.sku).to.include('WM-');",
+									"    pm.environment.set('inventory_item_id', json.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Wireless Mouse\",\n    \"sku\": \"WM-{{$timestamp}}\",\n    \"description\": \"Ergonomic wireless mouse with USB receiver\",\n    \"price\": 29.99,\n    \"category\": \"Electronics\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "Create Item - Validation Error (missing fields)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Has validation errors for required fields', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('name');",
+									"    pm.expect(json.errors).to.have.property('sku');",
+									"    pm.expect(json.errors).to.have.property('price');",
+									"    pm.expect(json.errors).to.have.property('category');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "Create Item - Validation Error (duplicate SKU)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('SKU already taken', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('sku');",
+									"});"
+								]
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// This test expects a duplicate SKU - run 'Create Item - Success' first",
+									"// or use a known SKU from seeded data"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Another Mouse\",\n    \"sku\": \"ELEC-001\",\n    \"description\": \"Duplicate SKU test\",\n    \"price\": 19.99,\n    \"category\": \"Electronics\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "Create Item - Validation Error (negative price)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Price validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('price');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Bad Price Item\",\n    \"sku\": \"BAD-PRICE-001\",\n    \"description\": \"Negative price test\",\n    \"price\": -10,\n    \"category\": \"Electronics\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "Create Item - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Unauthorized Item\",\n    \"sku\": \"UNAUTH-001\",\n    \"price\": 9.99,\n    \"category\": \"Test\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "Show Item - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Item has required fields', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data).to.have.property('id');",
+									"    pm.expect(json.data).to.have.property('name');",
+									"    pm.expect(json.data).to.have.property('sku');",
+									"    pm.expect(json.data).to.have.property('price');",
+									"    pm.expect(json.data).to.have.property('category');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_item_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Show Item - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory/99999",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "99999"]
+						}
+					}
+				},
+				{
+					"name": "Update Item - Success (full update)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Item updated', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data.name).to.eql('Updated Wireless Mouse');",
+									"    pm.expect(json.data.price).to.eql('39.99');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Wireless Mouse\",\n    \"sku\": \"WM-UPDATED-{{$timestamp}}\",\n    \"description\": \"Updated ergonomic wireless mouse\",\n    \"price\": 39.99,\n    \"category\": \"Electronics\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_item_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Item - Success (partial update)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Only price updated', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data.price).to.eql('49.99');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"price\": 49.99\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_item_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Item - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Ghost Item\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory/99999",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "99999"]
+						}
+					}
+				},
+				{
+					"name": "Delete Item - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Deleted message', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.message).to.eql('Item deleted successfully.');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_item_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Item - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory/99999",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "99999"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Warehouses",
+			"description": "CRUD operations for warehouses and warehouse inventory retrieval.",
+			"item": [
+				{
+					"name": "List Warehouses - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response has data array', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('data');",
+									"    pm.expect(json.data).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses"]
+						}
+					}
+				},
+				{
+					"name": "List Warehouses - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses"]
+						}
+					}
+				},
+				{
+					"name": "Create Warehouse - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test('Warehouse created', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data).to.have.property('id');",
+									"    pm.expect(json.data.name).to.eql('Test Warehouse');",
+									"    pm.environment.set('warehouse_id', json.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test Warehouse\",\n    \"location\": \"Cairo, Egypt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses"]
+						}
+					}
+				},
+				{
+					"name": "Create Second Warehouse - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test('Second warehouse created', function () {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('second_warehouse_id', json.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Second Warehouse\",\n    \"location\": \"Alexandria, Egypt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses"]
+						}
+					}
+				},
+				{
+					"name": "Create Warehouse - Validation Error (missing fields)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Has validation errors', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('name');",
+									"    pm.expect(json.errors).to.have.property('location');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses"]
+						}
+					}
+				},
+				{
+					"name": "Create Warehouse - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Unauthorized Warehouse\",\n    \"location\": \"Nowhere\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses"]
+						}
+					}
+				},
+				{
+					"name": "Show Warehouse - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Warehouse has required fields', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data).to.have.property('id');",
+									"    pm.expect(json.data).to.have.property('name');",
+									"    pm.expect(json.data).to.have.property('location');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/{{warehouse_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "{{warehouse_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Show Warehouse - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/99999",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "99999"]
+						}
+					}
+				},
+				{
+					"name": "Update Warehouse - Success (full update)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Warehouse updated', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data.name).to.eql('Updated Warehouse');",
+									"    pm.expect(json.data.location).to.eql('Giza, Egypt');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Warehouse\",\n    \"location\": \"Giza, Egypt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses/{{warehouse_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "{{warehouse_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Warehouse - Success (partial update)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Only location updated', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data.location).to.eql('Luxor, Egypt');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"location\": \"Luxor, Egypt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses/{{warehouse_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "{{warehouse_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Warehouse - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Ghost Warehouse\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/warehouses/99999",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "99999"]
+						}
+					}
+				},
+				{
+					"name": "Get Warehouse Inventory - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response has data array', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('data');",
+									"    pm.expect(json.data).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/{{warehouse_id}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "{{warehouse_id}}", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "Get Warehouse Inventory - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/99999/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "99999", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "Delete Warehouse - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Deleted message', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.message).to.eql('Warehouse deleted successfully.');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/{{warehouse_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "{{warehouse_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Warehouse - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/99999",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "99999"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Stock Transfers",
+			"description": "Stock transfer operations between warehouses, including insufficient stock and validation scenarios.",
+			"item": [
+				{
+					"name": "List Transfers - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response has data array', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('data');",
+									"    pm.expect(json.data).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "List Transfers - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test('Transfer created with correct data', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data).to.have.property('id');",
+									"    pm.expect(json.data).to.have.property('quantity');",
+									"    pm.expect(json.data).to.have.property('from_warehouse');",
+									"    pm.expect(json.data).to.have.property('to_warehouse');",
+									"    pm.expect(json.data).to.have.property('inventory_item');",
+									"    pm.environment.set('stock_transfer_id', json.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 2,\n    \"inventory_item_id\": 1,\n    \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Insufficient Stock",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Insufficient stock message', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.message).to.include('Insufficient');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 2,\n    \"inventory_item_id\": 1,\n    \"quantity\": 999999\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Validation Error (missing fields)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Has validation errors', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('from_warehouse_id');",
+									"    pm.expect(json.errors).to.have.property('to_warehouse_id');",
+									"    pm.expect(json.errors).to.have.property('inventory_item_id');",
+									"    pm.expect(json.errors).to.have.property('quantity');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Same Warehouse",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Different warehouse validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('to_warehouse_id');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 1,\n    \"inventory_item_id\": 1,\n    \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Non-existent Warehouse",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Warehouse exists validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('from_warehouse_id');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 99999,\n    \"to_warehouse_id\": 1,\n    \"inventory_item_id\": 1,\n    \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Non-existent Inventory Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Inventory item exists validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('inventory_item_id');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 2,\n    \"inventory_item_id\": 99999,\n    \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Zero Quantity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Quantity validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('quantity');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 2,\n    \"inventory_item_id\": 1,\n    \"quantity\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Negative Quantity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"pm.test('Quantity validation error', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.errors).to.have.property('quantity');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 2,\n    \"inventory_item_id\": 1,\n    \"quantity\": -10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Create Transfer - Unauthenticated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_warehouse_id\": 1,\n    \"to_warehouse_id\": 2,\n    \"inventory_item_id\": 1,\n    \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stock-transfers",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers"]
+						}
+					}
+				},
+				{
+					"name": "Show Transfer - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Transfer has required fields', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.data).to.have.property('id');",
+									"    pm.expect(json.data).to.have.property('quantity');",
+									"    pm.expect(json.data).to.have.property('from_warehouse');",
+									"    pm.expect(json.data).to.have.property('to_warehouse');",
+									"    pm.expect(json.data).to.have.property('inventory_item');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/stock-transfers/{{stock_transfer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers", "{{stock_transfer_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Show Transfer - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/stock-transfers/99999",
+							"host": ["{{base_url}}"],
+							"path": ["stock-transfers", "99999"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
