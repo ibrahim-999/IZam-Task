@@ -1,59 +1,266 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Izam Inventory Management API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A RESTful API for managing inventory across multiple warehouses, built with Laravel 12, Sanctum authentication, and Domain-Driven Design.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **PHP 8.3** / **Laravel 12**
+- **MySQL 8.0** — relational database
+- **Redis** — caching (warehouse inventory)
+- **Laravel Sanctum** — API token authentication
+- **L5-Swagger** — OpenAPI documentation
+- **Docker Compose** — containerized environment (PHP-FPM, Nginx, MySQL, Redis)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Architecture
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Domain-Driven Design
 
-## Learning Laravel
+The application is organized into bounded contexts under `app/Domains/`:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```
+app/
+├── Domains/
+│   ├── Auth/
+│   │   ├── Http/
+│   │   │   ├── Controllers/AuthController.php
+│   │   │   ├── Requests/{LoginRequest, RegisterRequest}
+│   │   │   └── Resources/UserResource.php
+│   │   └── Services/AuthService.php
+│   ├── Inventory/
+│   │   ├── DTOs/InventoryItemData.php
+│   │   ├── Http/
+│   │   │   ├── Controllers/InventoryItemController.php
+│   │   │   ├── Requests/{Store, Update}InventoryItemRequest
+│   │   │   └── Resources/InventoryItemResource.php
+│   │   ├── Models/InventoryItem.php
+│   │   └── Services/InventoryService.php
+│   ├── Warehouse/
+│   │   ├── Events/{LowStockDetected, StockTransferred}
+│   │   ├── Http/
+│   │   │   ├── Controllers/WarehouseController.php
+│   │   │   ├── Requests/{Store, Update}WarehouseRequest
+│   │   │   └── Resources/{WarehouseResource, StockResource}
+│   │   ├── Listeners/{SendLowStockNotification, InvalidateWarehouseCache}
+│   │   ├── Models/{Warehouse, Stock}
+│   │   └── Services/WarehouseService.php
+│   └── Transfer/
+│       ├── DTOs/StockTransferData.php
+│       ├── Exceptions/InsufficientStockException.php
+│       ├── Http/
+│       │   ├── Controllers/StockTransferController.php
+│       │   ├── Requests/StoreStockTransferRequest.php
+│       │   └── Resources/StockTransferResource.php
+│       ├── Models/StockTransfer.php
+│       └── Services/StockTransferService.php
+├── Documentations/V1/          # Swagger/OpenAPI annotations
+├── Http/Controllers/Controller.php
+├── Models/User.php
+└── Providers/AppServiceProvider.php
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Key Patterns
 
-## Laravel Sponsors
+- **Service Layer** — business logic in domain services, thin controllers
+- **DTOs** — data transfer objects for structured input
+- **Atomic Stock Transfers** — `DB::transaction` + `lockForUpdate` for data integrity
+- **Event-Driven** — `LowStockDetected` fires when stock drops to 10 or below; `StockTransferred` invalidates warehouse cache
+- **Redis Caching** — warehouse inventory cached with automatic invalidation on transfers
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Setup
 
-### Premium Partners
+### Prerequisites
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+- Docker & Docker Compose
 
-## Contributing
+### Installation
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+From the project root (where `docker-compose.yml` lives):
 
-## Code of Conduct
+```bash
+make setup
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Or manually:
 
-## Security Vulnerabilities
+```bash
+docker compose up -d
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
+docker compose exec app php artisan db:seed
+docker compose exec app php artisan l5-swagger:generate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Demo Credentials
 
-## License
+| Email               | Password   |
+|---------------------|------------|
+| `test@example.com`  | `password` |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## API Documentation
+
+Swagger UI is available at **http://localhost:8020/api/documentation** after running `make swagger`.
+
+## API Endpoints
+
+All endpoints are prefixed with `/api/v1`. Protected endpoints require a Bearer token.
+
+### Authentication
+
+| Method | Endpoint             | Auth | Description                  |
+|--------|----------------------|------|------------------------------|
+| POST   | `/api/v1/register`   | No   | Register a new user          |
+| POST   | `/api/v1/login`      | No   | Login and receive API token  |
+| POST   | `/api/v1/logout`     | Yes  | Revoke current token         |
+| GET    | `/api/v1/me`         | Yes  | Get authenticated user       |
+
+**Register request:**
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+```
+
+**Login request:**
+```json
+{
+  "email": "test@example.com",
+  "password": "password"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Logged in successfully.",
+  "user": { "id": 1, "name": "Test User", "email": "test@example.com", "..." : "..." },
+  "token": "1|abc123..."
+}
+```
+
+Use the token in subsequent requests:
+```
+Authorization: Bearer 1|abc123...
+```
+
+### Inventory Items
+
+| Method | Endpoint                  | Auth | Description                  |
+|--------|---------------------------|------|------------------------------|
+| GET    | `/api/v1/inventory`       | Yes  | List items (paginated)       |
+| POST   | `/api/v1/inventory`       | Yes  | Create item                  |
+| GET    | `/api/v1/inventory/{id}`  | Yes  | Show item                    |
+| PUT    | `/api/v1/inventory/{id}`  | Yes  | Update item                  |
+| DELETE | `/api/v1/inventory/{id}`  | Yes  | Delete item                  |
+
+**Filters** (query parameters on `GET /api/v1/inventory`):
+- `name` — partial match
+- `category` — exact match
+- `price_min` / `price_max` — price range
+- `per_page` — items per page (default: 15)
+
+**Create/Update body:**
+```json
+{
+  "name": "Wireless Mouse",
+  "sku": "WM-001",
+  "description": "Ergonomic wireless mouse",
+  "price": 29.99,
+  "category": "Electronics"
+}
+```
+
+### Warehouses
+
+| Method | Endpoint                               | Auth | Description              |
+|--------|----------------------------------------|------|--------------------------|
+| GET    | `/api/v1/warehouses`                   | Yes  | List warehouses          |
+| POST   | `/api/v1/warehouses`                   | Yes  | Create warehouse         |
+| GET    | `/api/v1/warehouses/{id}`              | Yes  | Show warehouse           |
+| PUT    | `/api/v1/warehouses/{id}`              | Yes  | Update warehouse         |
+| DELETE | `/api/v1/warehouses/{id}`              | Yes  | Delete warehouse         |
+| GET    | `/api/v1/warehouses/{id}/inventory`    | Yes  | Get warehouse inventory  |
+
+**Create/Update body:**
+```json
+{
+  "name": "Main Warehouse",
+  "location": "Cairo, Egypt"
+}
+```
+
+### Stock Transfers
+
+| Method | Endpoint                        | Auth | Description            |
+|--------|---------------------------------|------|------------------------|
+| GET    | `/api/v1/stock-transfers`       | Yes  | List transfers         |
+| POST   | `/api/v1/stock-transfers`       | Yes  | Create transfer        |
+| GET    | `/api/v1/stock-transfers/{id}`  | Yes  | Show transfer details  |
+
+**Create transfer body:**
+```json
+{
+  "from_warehouse_id": 1,
+  "to_warehouse_id": 2,
+  "inventory_item_id": 1,
+  "quantity": 20
+}
+```
+
+**Transfer logic:**
+- Source warehouse stock is locked and validated (must have sufficient quantity)
+- Source decremented, destination incremented (created if no stock record exists)
+- Audit record created in `stock_transfers` table
+- If source stock drops to **10 or below**, `LowStockDetected` event fires
+- Cache for both warehouses is invalidated via `StockTransferred` event
+
+## Postman Collection
+
+A ready-to-use Postman collection is available in the `postman/` directory with **61 requests** covering all API endpoints.
+
+### Import
+
+1. Open Postman and click **Import**.
+2. Select both files from `postman/`:
+   - `Izam_Inventory_API.postman_collection.json` — the collection
+   - `Izam_Inventory_API.postman_environment.json` — the environment
+3. Select the **Izam Inventory API - Local** environment in the top-right dropdown.
+4. Run **Auth > Login - Success** first to auto-set the `{{token}}` variable.
+
+### Coverage
+
+| Folder | Requests | Scenarios |
+|--------|----------|-----------|
+| Auth | 14 | Register, login, logout, me — success, validation errors, unauthenticated |
+| Inventory Items | 19 | CRUD — success, filters, pagination, validation errors, not found, unauthenticated |
+| Warehouses | 15 | CRUD + inventory — success, validation errors, not found, unauthenticated |
+| Stock Transfers | 13 | List, create, show — success, insufficient stock, same warehouse, invalid IDs, unauthenticated |
+
+Every request includes test scripts that validate status codes and response structure. Environment variables (`token`, `inventory_item_id`, `warehouse_id`, etc.) are auto-set by test scripts on successful create/login responses.
+
+## Testing
+
+```bash
+make test
+```
+
+| Suite   | Test                                  | Covers                               |
+|---------|---------------------------------------|--------------------------------------|
+| Unit    | `StockTransferServiceTest`            | Rejects over-transfers, zero stock   |
+| Feature | `StockTransferTest`                   | API transfer flow, auth, validation  |
+| Feature | `LowStockEventTest`                  | Event dispatch at threshold          |
+
+## Database Schema
+
+```
+users              — id, name, email, password, timestamps
+warehouses         — id, name, location, timestamps
+inventory_items    — id, name, sku (unique), description, price, category, timestamps
+stocks             — id, warehouse_id (FK), inventory_item_id (FK), quantity, timestamps
+                     unique(warehouse_id, inventory_item_id)
+stock_transfers    — id, from_warehouse_id (FK), to_warehouse_id (FK),
+                     inventory_item_id (FK), user_id (FK), quantity, timestamps
+```
