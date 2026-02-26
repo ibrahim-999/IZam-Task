@@ -35,7 +35,7 @@ izam/
 │   ├── nginx/          # Nginx config
 │   └── php/            # PHP-FPM Dockerfile
 ├── laravel/            # Laravel application
-├── frontend/           # Frontend (placeholder)
+├── frontend/           # Frontend (placeholder) - ready to implement if needed. 
 ├── docker-compose.yml
 └── Makefile
 ```
