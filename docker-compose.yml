@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: izam-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./laravel:/var/www
+    networks:
+      - izam-network
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    image: nginx:alpine
+    container_name: izam-nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./laravel:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - izam-network
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    container_name: izam-db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-izam_inventory}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-izam}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - izam-db-data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - izam-network
+
+  redis:
+    image: redis:alpine
+    container_name: izam-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - izam-redis-data:/data
+    networks:
+      - izam-network
+
+networks:
+  izam-network:
+    driver: bridge
+
+volumes:
+  izam-db-data:
+  izam-redis-data:
