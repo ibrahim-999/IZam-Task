@@ -10,6 +10,7 @@ use App\Domains\Warehouse\Models\Warehouse;
 use App\Domains\Warehouse\Services\WarehouseService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -71,9 +72,13 @@ class WarehouseController extends Controller
         }
     }
 
-    public function inventory(Warehouse $warehouse): AnonymousResourceCollection
+    public function inventory(Request $request, Warehouse $warehouse): AnonymousResourceCollection
     {
-        $stocks = $this->warehouseService->getInventory($warehouse);
+        $stocks = $this->warehouseService->getInventory(
+            $warehouse,
+            (int) $request->input('per_page', 15),
+            (int) $request->input('page', 1)
+        );
 
         return StockResource::collection($stocks);
     }
