@@ -4,7 +4,6 @@ namespace App\Domains\Warehouse\Services;
 
 use App\Domains\Warehouse\Models\Warehouse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class WarehouseService
@@ -36,17 +35,19 @@ class WarehouseService
         $warehouse->delete();
     }
 
-    public function getInventory(Warehouse $warehouse): Collection
+    public function getInventory(Warehouse $warehouse, int $perPage = 15, int $page = 1): LengthAwarePaginator
     {
+        $version = Cache::get("warehouse:{$warehouse->id}:inventory:version", 1);
+
         return Cache::remember(
-            "warehouse:{$warehouse->id}:inventory",
+            "warehouse:{$warehouse->id}:inventory:v{$version}:page:{$page}:perPage:{$perPage}",
             now()->addMinutes(10),
-            fn () => $warehouse->stocks()->with('inventoryItem')->get()
+            fn () => $warehouse->stocks()->with('inventoryItem')->paginate($perPage, ['*'], 'page', $page)
         );
     }
 
     public function invalidateCache(int $warehouseId): void
     {
-        Cache::forget("warehouse:{$warehouseId}:inventory");
+        Cache::increment("warehouse:{$warehouseId}:inventory:version");
     }
 }
