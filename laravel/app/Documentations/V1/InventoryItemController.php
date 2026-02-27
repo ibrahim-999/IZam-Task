@@ -8,11 +8,13 @@ class InventoryItemController
 {
     #[OA\Get(
         path: '/inventory',
-        summary: 'List all inventory items (paginated)',
+        summary: 'List inventory per warehouse (paginated)',
+        description: 'Returns paginated stock records (inventory per warehouse) with optional filters. Each record includes the warehouse and inventory item details.',
         security: [['bearerAuth' => []]],
         tags: ['Inventory'],
         parameters: [
-            new OA\Parameter(name: 'name', in: 'query', required: false, description: 'Filter by name (partial match)', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'warehouse_id', in: 'query', required: false, description: 'Filter by warehouse ID', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'name', in: 'query', required: false, description: 'Filter by item name (partial match)', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'category', in: 'query', required: false, description: 'Filter by exact category', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'price_min', in: 'query', required: false, description: 'Minimum price filter', schema: new OA\Schema(type: 'number')),
             new OA\Parameter(name: 'price_max', in: 'query', required: false, description: 'Maximum price filter', schema: new OA\Schema(type: 'number')),
@@ -21,10 +23,10 @@ class InventoryItemController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Paginated list of inventory items',
+                description: 'Paginated list of inventory per warehouse',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/InventoryItemResource')),
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/StockResource')),
                         new OA\Property(property: 'links', ref: '#/components/schemas/PaginationLinks'),
                         new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
                     ]

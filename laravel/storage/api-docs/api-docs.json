@@ -288,13 +288,23 @@
                 "tags": [
                     "Inventory"
                 ],
-                "summary": "List all inventory items (paginated)",
+                "summary": "List inventory per warehouse (paginated)",
+                "description": "Returns paginated stock records (inventory per warehouse) with optional filters. Each record includes the warehouse and inventory item details.",
                 "operationId": "2b9282db6c591ae3751e298fa52dc8b9",
                 "parameters": [
                     {
+                        "name": "warehouse_id",
+                        "in": "query",
+                        "description": "Filter by warehouse ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "name",
                         "in": "query",
-                        "description": "Filter by name (partial match)",
+                        "description": "Filter by item name (partial match)",
                         "required": false,
                         "schema": {
                             "type": "string"
@@ -339,7 +349,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated list of inventory items",
+                        "description": "Paginated list of inventory per warehouse",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -347,7 +357,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/InventoryItemResource"
+                                                "$ref": "#/components/schemas/StockResource"
                                             }
                                         },
                                         "links": {
@@ -1315,7 +1325,8 @@
                 "tags": [
                     "Warehouses"
                 ],
-                "summary": "Get stock inventory for a warehouse",
+                "summary": "Get paginated stock inventory for a warehouse",
+                "description": "Returns a paginated list of stock items in the specified warehouse. Results are cached with automatic invalidation on stock transfers.",
                 "operationId": "3285086b9a818acf8de9d954658937c2",
                 "parameters": [
                     {
@@ -1326,11 +1337,29 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number (default: 1)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of stock items in the warehouse",
+                        "description": "Paginated list of stock items in the warehouse",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1340,6 +1369,12 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/StockResource"
                                             }
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
                                         }
                                     },
                                     "type": "object"

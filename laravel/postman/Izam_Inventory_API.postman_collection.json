@@ -531,7 +531,7 @@
 			"description": "CRUD operations for inventory items with filtering and pagination.",
 			"item": [
 				{
-					"name": "List Items - Success",
+					"name": "List Items - Success (Inventory Per Warehouse)",
 					"event": [
 						{
 							"listen": "test",
@@ -546,6 +546,14 @@
 									"    pm.expect(json).to.have.property('data');",
 									"    pm.expect(json).to.have.property('links');",
 									"    pm.expect(json).to.have.property('meta');",
+									"});",
+									"pm.test('Data contains stock records with warehouse context', function () {",
+									"    var json = pm.response.json();",
+									"    if (json.data.length > 0) {",
+									"        pm.expect(json.data[0]).to.have.property('warehouse_id');",
+									"        pm.expect(json.data[0]).to.have.property('inventory_item_id');",
+									"        pm.expect(json.data[0]).to.have.property('quantity');",
+									"    }",
 									"});"
 								]
 							}
@@ -560,6 +568,47 @@
 							"raw": "{{base_url}}/inventory",
 							"host": ["{{base_url}}"],
 							"path": ["inventory"]
+						}
+					}
+				},
+				{
+					"name": "List Items - Filter by Warehouse",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response is paginated with stock data', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('data');",
+									"    pm.expect(json).to.have.property('links');",
+									"    pm.expect(json).to.have.property('meta');",
+									"    if (json.data.length > 0) {",
+									"        pm.expect(json.data[0]).to.have.property('warehouse_id');",
+									"        pm.expect(json.data[0]).to.have.property('inventory_item_id');",
+									"        pm.expect(json.data[0]).to.have.property('quantity');",
+									"    }",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/inventory?warehouse_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{ "key": "warehouse_id", "value": "1" }
+							]
 						}
 					}
 				},
@@ -1549,7 +1598,7 @@
 					}
 				},
 				{
-					"name": "Get Warehouse Inventory - Success",
+					"name": "Get Warehouse Inventory - Success (Paginated)",
 					"event": [
 						{
 							"listen": "test",
@@ -1559,10 +1608,16 @@
 									"pm.test('Status is 200', function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
-									"pm.test('Response has data array', function () {",
+									"pm.test('Response has paginated data', function () {",
 									"    var json = pm.response.json();",
 									"    pm.expect(json).to.have.property('data');",
 									"    pm.expect(json.data).to.be.an('array');",
+									"    pm.expect(json).to.have.property('links');",
+									"    pm.expect(json).to.have.property('meta');",
+									"    pm.expect(json.meta).to.have.property('current_page');",
+									"    pm.expect(json.meta).to.have.property('last_page');",
+									"    pm.expect(json.meta).to.have.property('per_page');",
+									"    pm.expect(json.meta).to.have.property('total');",
 									"});"
 								]
 							}
@@ -1577,6 +1632,42 @@
 							"raw": "{{base_url}}/warehouses/{{warehouse_id}}/inventory",
 							"host": ["{{base_url}}"],
 							"path": ["warehouses", "{{warehouse_id}}", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "Get Warehouse Inventory - Custom Pagination",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Per page is 5', function () {",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.meta.per_page).to.eql(5);",
+									"    pm.expect(json.meta.current_page).to.eql(1);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/warehouses/{{warehouse_id}}/inventory?per_page=5&page=1",
+							"host": ["{{base_url}}"],
+							"path": ["warehouses", "{{warehouse_id}}", "inventory"],
+							"query": [
+								{ "key": "per_page", "value": "5" },
+								{ "key": "page", "value": "1" }
+							]
 						}
 					}
 				},

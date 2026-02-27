@@ -198,19 +198,24 @@ class WarehouseController
 
     #[OA\Get(
         path: '/warehouses/{warehouse}/inventory',
-        summary: 'Get stock inventory for a warehouse',
+        summary: 'Get paginated stock inventory for a warehouse',
+        description: 'Returns a paginated list of stock items in the specified warehouse. Results are cached with automatic invalidation on stock transfers.',
         security: [['bearerAuth' => []]],
         tags: ['Warehouses'],
         parameters: [
             new OA\Parameter(name: 'warehouse', in: 'path', required: true, description: 'Warehouse ID', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, description: 'Items per page (default: 15)', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, description: 'Page number (default: 1)', schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'List of stock items in the warehouse',
+                description: 'Paginated list of stock items in the warehouse',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/StockResource')),
+                        new OA\Property(property: 'links', ref: '#/components/schemas/PaginationLinks'),
+                        new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
                     ]
                 )
             ),

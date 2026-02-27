@@ -42,6 +42,7 @@ app/
 │   │   │   └── Resources/{WarehouseResource, StockResource}
 │   │   ├── Listeners/{SendLowStockNotification, InvalidateWarehouseCache}
 │   │   ├── Models/{Warehouse, Stock}
+│   │   ├── Notifications/LowStockNotification.php
 │   │   └── Services/WarehouseService.php
 │   └── Transfer/
 │       ├── DTOs/StockTransferData.php
@@ -63,8 +64,9 @@ app/
 - **Service Layer** — business logic in domain services, thin controllers
 - **DTOs** — data transfer objects for structured input
 - **Atomic Stock Transfers** — `DB::transaction` + `lockForUpdate` for data integrity
-- **Event-Driven** — `LowStockDetected` fires when stock drops to 10 or below; `StockTransferred` invalidates warehouse cache
-- **Redis Caching** — warehouse inventory cached with automatic invalidation on transfers
+- **Event-Driven** — `LowStockDetected` fires when stock drops to 10 or below and sends an email notification to admin; `StockTransferred` invalidates warehouse cache
+- **Redis Caching** — warehouse inventory cached with version-based invalidation on transfers
+- **Email Notifications** — Low stock events trigger a `LowStockNotification` email to the admin via Laravel's Notification system
 
 ## Setup
 
@@ -148,16 +150,19 @@ Authorization: Bearer 1|abc123...
 
 ### Inventory Items
 
-| Method | Endpoint                  | Auth | Description                  |
-|--------|---------------------------|------|------------------------------|
-| GET    | `/api/v1/inventory`       | Yes  | List items (paginated)       |
-| POST   | `/api/v1/inventory`       | Yes  | Create item                  |
-| GET    | `/api/v1/inventory/{id}`  | Yes  | Show item                    |
-| PUT    | `/api/v1/inventory/{id}`  | Yes  | Update item                  |
-| DELETE | `/api/v1/inventory/{id}`  | Yes  | Delete item                  |
+| Method | Endpoint                  | Auth | Description                              |
+|--------|---------------------------|------|------------------------------------------|
+| GET    | `/api/v1/inventory`       | Yes  | List inventory per warehouse (paginated) |
+| POST   | `/api/v1/inventory`       | Yes  | Create item                              |
+| GET    | `/api/v1/inventory/{id}`  | Yes  | Show item                                |
+| PUT    | `/api/v1/inventory/{id}`  | Yes  | Update item                              |
+| DELETE | `/api/v1/inventory/{id}`  | Yes  | Delete item                              |
+
+`GET /api/v1/inventory` returns stock records (inventory per warehouse), each including warehouse and inventory item details.
 
 **Filters** (query parameters on `GET /api/v1/inventory`):
-- `name` — partial match
+- `warehouse_id` — filter by warehouse
+- `name` — partial match on item name
 - `category` — exact match
 - `price_min` / `price_max` — price range
 - `per_page` — items per page (default: 15)
@@ -182,7 +187,7 @@ Authorization: Bearer 1|abc123...
 | GET    | `/api/v1/warehouses/{id}`              | Yes  | Show warehouse           |
 | PUT    | `/api/v1/warehouses/{id}`              | Yes  | Update warehouse         |
 | DELETE | `/api/v1/warehouses/{id}`              | Yes  | Delete warehouse         |
-| GET    | `/api/v1/warehouses/{id}/inventory`    | Yes  | Get warehouse inventory  |
+| GET    | `/api/v1/warehouses/{id}/inventory`    | Yes  | Get warehouse inventory (paginated) |
 
 **Create/Update body:**
 ```json
@@ -214,12 +219,12 @@ Authorization: Bearer 1|abc123...
 - Source warehouse stock is locked and validated (must have sufficient quantity)
 - Source decremented, destination incremented (created if no stock record exists)
 - Audit record created in `stock_transfers` table
-- If source stock drops to **10 or below**, `LowStockDetected` event fires
+- If source stock drops to **10 or below**, `LowStockDetected` event fires and an email notification is sent to the admin
 - Cache for both warehouses is invalidated via `StockTransferred` event
 
 ## Postman Collection
 
-A ready-to-use Postman collection is available in the `postman/` directory with **61 requests** covering all API endpoints.
+A ready-to-use Postman collection is available in the `postman/` directory with **64 requests** covering all API endpoints.
 
 ### Import
 
@@ -235,8 +240,8 @@ A ready-to-use Postman collection is available in the `postman/` directory with 
 | Folder | Requests | Scenarios |
 |--------|----------|-----------|
 | Auth | 14 | Register, login, logout, me — success, validation errors, unauthenticated |
-| Inventory Items | 19 | CRUD — success, filters, pagination, validation errors, not found, unauthenticated |
-| Warehouses | 15 | CRUD + inventory — success, validation errors, not found, unauthenticated |
+| Inventory Items | 20 | CRUD — success, filters (name, category, price, warehouse), pagination, validation errors, not found, unauthenticated |
+| Warehouses | 17 | CRUD + paginated inventory — success, custom pagination, validation errors, not found, unauthenticated |
 | Stock Transfers | 13 | List, create, show — success, insufficient stock, same warehouse, invalid IDs, unauthenticated |
 
 Every request includes test scripts that validate status codes and response structure. Environment variables (`token`, `inventory_item_id`, `warehouse_id`, etc.) are auto-set by test scripts on successful create/login responses.

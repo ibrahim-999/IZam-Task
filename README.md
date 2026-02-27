@@ -1,6 +1,6 @@
 # Izam Inventory Management System
 
-A containerized inventory management platform with a Laravel REST API backend.
+A containerized inventory management platform with a Laravel REST API backend. Features paginated inventory per warehouse, stock transfers with atomic locking, and email notifications for low stock alerts.
 
 ## Prerequisites
 
