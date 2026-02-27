@@ -8,6 +8,7 @@ use App\Domains\Inventory\Http\Requests\UpdateInventoryItemRequest;
 use App\Domains\Inventory\Http\Resources\InventoryItemResource;
 use App\Domains\Inventory\Models\InventoryItem;
 use App\Domains\Inventory\Services\InventoryService;
+use App\Domains\Warehouse\Http\Resources\StockResource;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,10 +22,10 @@ class InventoryItemController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $items = $this->inventoryService->list($request->only([
-            'name', 'category', 'price_min', 'price_max', 'per_page',
+            'warehouse_id', 'name', 'category', 'price_min', 'price_max', 'per_page',
         ]));
 
-        return InventoryItemResource::collection($items);
+        return StockResource::collection($items);
     }
 
     public function store(StoreInventoryItemRequest $request): JsonResponse
